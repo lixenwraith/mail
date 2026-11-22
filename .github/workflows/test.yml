@@ -1,0 +1,45 @@
+name: Test and Fuzz
+
+on:
+  push:
+    branches: [ main, master, develop, 'claude/*' ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build, Test, and Fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: false
+
+    - name: Format
+      run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+    - name: Vet code
+      run: go vet ./...
+
+    - name: Run tests with race detector
+      run: go test -race -count=1 ./...
+
+    - name: Bounded fuzz smoke tests
+      env:
+        GOMAXPROCS: '2'
+      run: |
+        set -eu
+        for target in $(go test -list '^Fuzz' . | grep '^Fuzz' || true); do
+          go test -run '^$' -fuzz "^${target}$" -fuzztime=10s -parallel=2 .
+        done
