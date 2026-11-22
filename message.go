@@ -87,26 +87,26 @@ func (m *Message) render(limit int64) (*rendered, error) {
 	}
 	out := &rendered{from: from.Address}
 	var b bytes.Buffer
-	writeHeader(&b, "From", from.String())
+	writeHeader(&b, "From", shown(from))
 	seen := make(map[string]bool)
 	for _, list := range []struct {
 		name      string
 		addresses []string
 	}{{"To", m.To}, {"Cc", m.Cc}, {"Bcc", m.Bcc}} {
-		var shown []string
+		var listed []string
 		for _, text := range list.addresses {
 			address, err := parseAddress(text)
 			if err != nil {
 				return invalid("%s: %w", strings.ToLower(list.name), err)
 			}
-			shown = append(shown, address.String())
+			listed = append(listed, shown(address))
 			if !seen[address.Address] {
 				seen[address.Address] = true
 				out.to = append(out.to, address.Address)
 			}
 		}
-		if len(shown) > 0 && list.name != "Bcc" {
-			writeHeader(&b, list.name, strings.Join(shown, ", "))
+		if len(listed) > 0 && list.name != "Bcc" {
+			writeHeader(&b, list.name, strings.Join(listed, ", "))
 		}
 	}
 	if len(out.to) == 0 {
@@ -117,7 +117,7 @@ func (m *Message) render(limit int64) (*rendered, error) {
 		if err != nil {
 			return invalid("reply-to: %w", err)
 		}
-		writeHeader(&b, "Reply-To", reply.String())
+		writeHeader(&b, "Reply-To", shown(reply))
 	}
 	if !printable(m.Subject) {
 		return invalid("subject holds a control character")
@@ -190,6 +190,15 @@ func parseAddress(text string) (*netmail.Address, error) {
 		}
 	}
 	return address, nil
+}
+
+// shown writes an address for a header: with its name, or bare without one.
+func shown(address *netmail.Address) string {
+	text := address.String()
+	if address.Name == "" {
+		return strings.Trim(text, "<>")
+	}
+	return text
 }
 
 // printable refuses what could end a header line or hide in it.

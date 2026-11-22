@@ -51,7 +51,7 @@ func TestSendHandsTheRelayTheEnvelopeAndTheMessage(t *testing.T) {
 		strings.Join(got.to, " ") != "one@example.org two@example.org three@example.org hidden@example.org" {
 		t.Errorf("envelope from %q to %q", got.from, got.to)
 	}
-	for _, want := range []string{"From: \"Sender\" <sender@example.org>\r\n", "Cc: <one@example.org>, <three@example.org>\r\n", "\r\n\r\nHello.\r\n"} {
+	for _, want := range []string{"From: \"Sender\" <sender@example.org>\r\n", "To: \"First\" <one@example.org>, two@example.org\r\n", "Cc: one@example.org, three@example.org\r\n", "\r\n\r\nHello.\r\n"} {
 		if !strings.Contains(got.data, want) {
 			t.Errorf("message lacks %q:\n%s", want, got.data)
 		}
